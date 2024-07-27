@@ -40,6 +40,7 @@ func main() {
 	{
 		api.POST("/register", userHandler.Register)
 		api.POST("/login", userHandler.Login)
+		api.POST("/logout", userHandler.Logout)
 	}
 
 	apiAuth := router.Group("/api/v1")
