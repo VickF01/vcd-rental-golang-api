@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"vcd-rental/handler"
+	"vcd-rental/middleware"
+	"vcd-rental/user"
 	"vcd-rental/vcd"
 
 	"github.com/gin-gonic/gin"
@@ -18,12 +20,17 @@ func main() {
 		log.Fatal("DB Connection Error!")
 	}
 
-	db.AutoMigrate(&vcd.VCD{})
+	db.AutoMigrate(&vcd.VCD{}, &user.User{})
 
 	vcdRepository := vcd.NewRepo(db)
 	vcdService := vcd.NewService(vcdRepository)
 
 	vcdHandler := handler.VCDHandler(vcdService)
+
+	userRepository := user.NewRepo(db)
+	userService := user.NewService(userRepository)
+
+	userHandler := handler.NewUserHandler(userService)
 
 	router := gin.Default()
 	router.Use(gin.Logger())
@@ -31,12 +38,19 @@ func main() {
 
 	api := router.Group("/api/v1")
 	{
-		api.GET("/", vcdHandler.RootHandler)
-		api.GET("/vcd", vcdHandler.GetAllVCD)
-		api.GET("/vcd/:id", vcdHandler.GetOneVCD)
-		api.POST("/vcd/add", vcdHandler.CreateVCD)
-		api.PUT("/vcd/edit/:id", vcdHandler.UpdateVCD)
-		api.DELETE("/vcd/delete/:id", vcdHandler.DeleteVCD)
+		api.POST("/register", userHandler.Register)
+		api.POST("/login", userHandler.Login)
+	}
+
+	apiAuth := router.Group("/api/v1")
+	apiAuth.Use(middleware.AuthMiddleware())
+	{
+		apiAuth.GET("/", vcdHandler.RootHandler)
+		apiAuth.GET("/vcd", vcdHandler.GetAllVCD)
+		apiAuth.GET("/vcd/:id", vcdHandler.GetOneVCD)
+		apiAuth.POST("/vcd/add", vcdHandler.CreateVCD)
+		apiAuth.PUT("/vcd/edit/:id", vcdHandler.UpdateVCD)
+		apiAuth.DELETE("/vcd/delete/:id", vcdHandler.DeleteVCD)
 	}
 
 	router.Run()
